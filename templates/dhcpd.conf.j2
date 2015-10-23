@@ -19,7 +19,11 @@ default-lease-time {{ dhcp_common_default_lease_time }};
 {% if dhcp_common_max_lease_time is defined %}
 max-lease-time {{ dhcp_common_max_lease_time }};
 {% endif %}
-
+{% if dhcp_common_global_extras is defined %}
+    {% for ge in dhcp_common_global_extras %}
+        {{ ge }};
+    {% endfor %}
+{% endif %}
 # Dynamic DNS
 ddns-updates {{ dhcp_ddns_updates | ternary("on", "off") }};
 ddns-update-style {{ dhcp_ddns_update_style }};
@@ -151,12 +155,38 @@ subnet {{ s.base }} netmask {{ s.netmask }} {
 {% if s.ntp_servers is defined %}
   option ntp-servers {{ s.ntp_servers }};
 {% endif %}
+    {% if s.extra_options is defined %}
+        {% for extra_opt in s.extra_options %}
+            {{ extra_opt }};
+        {% endfor %}
+    {% endif %}
 {% if s.default_lease_time is defined %}
   default-lease-time {{ s.default_lease_time }};
 {% endif %}
 {% if s.max_lease_time is defined %}
   max-lease-time {{ s.max_lease_time }};
 {% endif %}
+    {% if s.dhcp_ifelse is defined %}
+        # If else clauses
+        {% for cond in s.dhcp_ifelse %}
+            if {{ cond.condition }} {
+            {{ cond.val }}
+            }{% if cond.elseif is defined %}
+            {% for conds in cond.elseif %}
+                elsif {{ conds.condition }} {
+                {{ conds.val }}
+                }
+            {% endfor %}
+            {% endif %}
+            {% if cond.else is defined %}
+                {% for e in cond.else %}
+                else {
+                    {{ e.val }}
+                }
+                {% endfor %}
+            {% endif %}
+        {% endfor %}
+    {% endif %}
 {% if s.pools is defined %}
 {% for p in s.pools %}
   pool {
