@@ -20,10 +20,15 @@ default-lease-time {{ dhcp_common_default_lease_time }};
 max-lease-time {{ dhcp_common_max_lease_time }};
 {% endif %}
 {% if dhcp_common_ddns_update_style is defined %}
-
 # Use this to enable / disable dynamic dns updates globally.
 ddns-update-style {{ dhcp_common_ddns_update_style }};
 {% endif %}
+{% if dhcp_common_global_extras is defined %}
+{% for ge in dhcp_common_global_extras %}
+{{ ge }};
+{% endfor %}
+{% endif %}
+
 {% if dhcp_common_authoritative is defined %}
 
 # If this DHCP server is the official DHCP server for the local
@@ -109,33 +114,57 @@ host {{ h.name }} {
 # Subnets
 {% for s in dhcp_subnets %}
 subnet {{ s.base }} netmask {{ s.netmask }} {
-{% if s.interface is defined %}
-  interface "{{ s.interface }}";
-{% endif %}
-{% if s.range_start is defined %}
-  range {{ s.range_start }} {{ s.range_end }};
-{% endif %}
-{% if s.routers is defined %}
-  option routers {{ s.routers }};
-{% endif %}
-{% if s.broadcast_address is defined %}
-  option broadcast-address {{ s.broadcast_address }};
-{% endif %}
-{% if s.domain_nameservers is defined %}
-  option domain-name-servers {{ s.domain_nameservers }};
-{% endif %}
-{% if s.domain_name is defined %}
-  option domain-name "{{ s.domain_name }}";
-{% endif %}
-{% if s.ntp_servers is defined %}
-  option ntp-servers {{ s.ntp_servers }};
-{% endif %}
-{% if s.default_lease_time is defined %}
-  default-lease-time {{ s.default_lease_time }};
-{% endif %}
-{% if s.max_lease_time is defined %}
-  max-lease-time {{ s.max_lease_time }};
-{% endif %}
+    {% if s.interface is defined %}
+    interface "{{ s.interface }}";
+    {% endif %}
+    {% if s.range_start is defined %}
+    range {{ s.range_start }} {{ s.range_end }};
+    {% endif %}
+    {% if s.routers is defined %}
+    option routers {{ s.routers }};
+    {% endif %}
+    {% if s.broadcast_address is defined %}
+    option broadcast-address {{ s.broadcast_address }};
+    {% endif %}
+    {% if s.domain_nameservers is defined %}
+    option domain-name-servers {{ s.domain_nameservers }};
+    {% endif %}
+    {% if s.domain_name is defined %}
+    option domain-name "{{ s.domain_name }}";
+    {% endif %}
+    {% if s.ntp_servers is defined %}
+    option ntp-servers {{ s.ntp_servers }};
+    {% endif %}
+    {% if s.extra_options is defined %}
+        {% for extra_opt in s.extra_options %}
+    {{ extra_opt }};
+        {% endfor %}
+    {% endif %}
+    {% if s.default_lease_time is defined %}
+    default-lease-time {{ s.default_lease_time }};
+    {% endif %}
+    {% if s.max_lease_time is defined %}
+    max-lease-time {{ s.max_lease_time }};
+    {% endif %}
+    {% if s.dhcp_ifelse is defined %}
+    # If else clauses
+        {% for cond in s.dhcp_ifelse %}
+    if {{ cond.condition }} {
+        {{ cond.val }}
+    }{% if cond.elseif is defined %}
+            {% for conds in cond.elseif %}
+    elsif {{ conds.condition }} {
+        {{ conds.val }}
+    }       {% endfor %}
+    {% endif %}
+    {% if cond.else is defined %}
+        {% for e in cond.else %}
+    else {
+        {{ e.val }}
+    }{% endfor %}
+    {% endif %}
+    {% endfor %}
+    {% endif %}
 {% if s.pools is defined %}
 {% for p in s.pools %}
   pool {
@@ -156,6 +185,7 @@ subnet {{ s.base }} netmask {{ s.netmask }} {
   {{ p }};
 {% endfor %}
 {% endif %}
+
 }
 {% endfor %}
 {% endif %}
