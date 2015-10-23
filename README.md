@@ -46,7 +46,10 @@ DHCP server configuration.
     - opt66 code 66 = string
     dhcp_common_parameters:
     - filename "pxelinux.0"
-
+    dhcp_common_global_extras:
+          - ddns-updates off
+          - always-broadcast on
+          - one-lease-per-client true
     # DDNS configuration
     dhcp_ddns_client_updates: true|false (default is false)
     dhcp_ddns_updates: true|false (default is true)
@@ -77,6 +80,10 @@ DHCP server configuration.
       domain_nameservers: 192.168.10.1, 192.168.10.2
       domain_name: example.org
       ntp_servers: pool.ntp.org
+      extra_options:
+        - next-server 10.127.113.3
+        - site-option-space "pxelinux"
+        - option pxelinux.magic f1:00:74:7e
       default_lease_time: 3600
       max_lease_time: 7200
       pools:
@@ -88,6 +95,16 @@ DHCP server configuration.
       - range_start: 192.168.110.10
         range_end: 192.168.110.20
         rule: 'deny members of "foo"'
+      dhcp_ifelse:
+        - condition: substring(hardware, 1, 3) = C8:CB:B8
+          val: 'filename "hp-42xxse-ipxe-loader.kpxe";'
+          elseif:
+            - condition: substring(hardware, 1, 3) = 18:A9:05
+              val: 'filename "hp-42xxse-ipxe-loader.kpxe";'
+            - condition: substring(hardware, 1, 3) = 28:92:4A
+              val: 'filename "hp-42xxse-ipxe-loader.kpxe";'
+           else:
+             - val: 'filename "undionly.kpxe";'
       parameters:
       - filename "pxelinux.0"
 
